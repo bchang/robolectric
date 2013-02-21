@@ -262,12 +262,23 @@ public class ViewGroupTest {
     }
 
     @Test
-    // todo is this correct behavior? Doesn't real Android throw exceptions for this? PG 2/20/2013
-    public void getChildAt_shouldReturnNullForInvalidIndices() {
+    public void getChildAt_shouldThrowIndexOutOfBoundsForInvalidIndices() { // 'cause that's what Android does
         assertThat(root.getChildCount(), equalTo(3));
-        assertThat(root.getChildAt(13), nullValue());
-        assertThat(root.getChildAt(3), nullValue());
-        assertThat(root.getChildAt(-1), nullValue());
+        assertThrowsExceptionForBadIndex(13);
+        assertThrowsExceptionForBadIndex(3);
+        assertThrowsExceptionForBadIndex(-1);
+    }
+
+    private void assertThrowsExceptionForBadIndex(int index) {
+        try {
+            assertThat(root.getChildAt(index), nullValue());
+            fail("no exception");
+        } catch (IndexOutOfBoundsException ex) {
+            //noinspection UnnecessaryReturnStatement
+            return;
+        } catch (Exception ex) {
+            fail("wrong exception type");
+        }
     }
 
     @Test

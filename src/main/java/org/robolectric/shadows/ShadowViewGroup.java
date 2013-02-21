@@ -84,9 +84,6 @@ public class ShadowViewGroup extends ShadowView {
             }
         }
         ((ViewGroup)realView).addView(child, index, params);
-        // todo keep or not? PG & RS 2/19/13
-//        shadowOf(child).parent = this;
-//        requestLayout();
     }
 
     @Implementation
@@ -135,7 +132,7 @@ public class ShadowViewGroup extends ShadowView {
 
     @Implementation
     public View getChildAt(int index) {
-        return isValidIndex(index) ? children.get(index) : null;
+        return children.get(index);
     }
 
     @Implementation
@@ -289,10 +286,6 @@ public class ShadowViewGroup extends ShadowView {
 
     protected void removedChild(View child) {
         if (isAttachedToWindow()) shadowOf(child).callOnDetachedFromWindow();
-    }
-
-    private boolean isValidIndex(int i) {
-        return i >= 0 && i < children.size();
     }
 
     public MotionEvent getInterceptedTouchEvent() {
