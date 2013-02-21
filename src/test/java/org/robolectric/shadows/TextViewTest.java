@@ -5,8 +5,10 @@ import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
+import android.text.Layout;
 import android.text.Spannable;
 import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.text.TextWatcher;
 import android.text.method.ArrowKeyMovementMethod;
 import android.text.method.MovementMethod;
@@ -366,7 +368,7 @@ public class TextViewTest {
 
     @Test
     public void canSetAndGetLayout() throws Exception {
-        StaticLayout layout = new StaticLayout(null, null, 0, null, 0, 0, true);
+        StaticLayout layout = new StaticLayout("", new TextPaint(), 0, Layout.Alignment.ALIGN_CENTER, 0, 0, true);
         shadowOf(textView).setLayout(layout);
         assertEquals(textView.getLayout(), layout);
     }

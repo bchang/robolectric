@@ -395,6 +395,7 @@ import org.robolectric.shadows.ShadowSimpleCursorAdapter;
 import org.robolectric.shadows.ShadowSmsManager;
 import org.robolectric.shadows.ShadowSpannableString;
 import org.robolectric.shadows.ShadowSpannableStringBuilder;
+import org.robolectric.shadows.ShadowSpannableStringInternal;
 import org.robolectric.shadows.ShadowSpannedString;
 import org.robolectric.shadows.ShadowSparseArray;
 import org.robolectric.shadows.ShadowSparseBooleanArray;
@@ -405,6 +406,7 @@ import org.robolectric.shadows.ShadowStatFs;
 import org.robolectric.shadows.ShadowStateListDrawable;
 import org.robolectric.shadows.ShadowSurfaceView;
 import org.robolectric.shadows.ShadowSyncResult;
+import org.robolectric.shadows.ShadowSystemProperties;
 import org.robolectric.shadows.ShadowTabActivity;
 import org.robolectric.shadows.ShadowTabHost;
 import org.robolectric.shadows.ShadowTabSpec;
@@ -420,6 +422,7 @@ import org.robolectric.shadows.ShadowTypedArray;
 import org.robolectric.shadows.ShadowTypedValue;
 import org.robolectric.shadows.ShadowTypeface;
 import org.robolectric.shadows.ShadowURLSpan;
+import org.robolectric.shadows.ShadowUri;
 import org.robolectric.shadows.ShadowUriMatcher;
 import org.robolectric.shadows.ShadowValueAnimator;
 import org.robolectric.shadows.ShadowVibrator;
@@ -433,6 +436,7 @@ import org.robolectric.shadows.ShadowViewMeasureSpec;
 import org.robolectric.shadows.ShadowViewPager;
 import org.robolectric.shadows.ShadowViewStub;
 import org.robolectric.shadows.ShadowViewTreeObserver;
+import org.robolectric.shadows.ShadowWebSyncManager;
 import org.robolectric.shadows.ShadowWebView;
 import org.robolectric.shadows.ShadowWifiConfiguration;
 import org.robolectric.shadows.ShadowWifiInfo;
@@ -476,23 +480,34 @@ public class Robolectric {
     }
 
     public static void bindShadowClass(Class<?> shadowClass) {
-        Implements realClass = shadowClass.getAnnotation(Implements.class);
-        if (realClass == null) {
+        Implements implementsAnnotation = shadowClass.getAnnotation(Implements.class);
+        if (implementsAnnotation == null) {
             throw new IllegalArgumentException(shadowClass + " is not annotated with @Implements");
         }
 
         try {
-            getShadowWrangler().bindShadowClass(realClass.value(), shadowClass);
+            String className = implementsAnnotation.value().getName();
+            if (!implementsAnnotation.className().isEmpty()) {
+                className = implementsAnnotation.className();
+            }
+            getShadowWrangler().bindShadowClass(className, shadowClass, implementsAnnotation.callThroughByDefault());
         } catch (TypeNotPresentException typeLoadingException) {
             String unloadableClassName = shadowClass.getSimpleName();
-            if (isIgnorableClassLoadingException(typeLoadingException)) {
+            if (typeLoadingException.typeName().startsWith("com.google.android.maps")) {
+                warnAbout(unloadableClassName);
+                return;
+            } else if (isIgnorableClassLoadingException(typeLoadingException)) {
                 //this allows users of the robolectric.jar file to use the non-Google APIs version of the api
-                if (unloadableClassNames.add(unloadableClassName)) {
-                    System.out.println("Warning: an error occurred while binding shadow class: " + unloadableClassName);
-                }
+                warnAbout(unloadableClassName);
             } else {
                 throw typeLoadingException;
             }
+        }
+    }
+
+    private static void warnAbout(String unloadableClassName) {
+        if (unloadableClassNames.add(unloadableClassName)) {
+            System.out.println("Warning: an error occurred while binding shadow class: " + unloadableClassName);
         }
     }
 
@@ -751,6 +766,7 @@ public class Robolectric {
                 ShadowSmsManager.class,
                 ShadowSpannableString.class,
                 ShadowSpannableStringBuilder.class,
+                ShadowSpannableStringInternal.class,
                 ShadowSpannedString.class,
                 ShadowSparseArray.class,
                 ShadowSparseBooleanArray.class,
@@ -769,6 +785,7 @@ public class Robolectric {
                 ShadowStateListDrawable.class,
                 ShadowStatFs.class,
                 ShadowSurfaceView.class,
+                ShadowSystemProperties.class,
                 ShadowTabActivity.class,
                 ShadowTabHost.class,
                 ShadowTabSpec.class,
@@ -784,6 +801,7 @@ public class Robolectric {
                 ShadowTypedValue.class,
                 ShadowTypeface.class,
                 ShadowUriMatcher.class,
+                ShadowUri.class,
                 ShadowURLSpan.class,
                 ShadowValueAnimator.class,
                 ShadowVibrator.class,
@@ -798,6 +816,7 @@ public class Robolectric {
                 ShadowViewStub.class,
                 ShadowViewTreeObserver.class,
                 ShadowWebView.class,
+                ShadowWebSyncManager.class,
                 ShadowWifiConfiguration.class,
                 ShadowWifiInfo.class,
                 ShadowWifiManager.class,
@@ -827,6 +846,10 @@ public class Robolectric {
 
     public static <T> T directlyOn(T shadowedObject) {
         return RobolectricInternals.directlyOn(shadowedObject);
+    }
+
+    public static <T> T directlyOn(T shadowedObject, Class<T> clazz) {
+        return RobolectricInternals.directlyOn(shadowedObject, clazz);
     }
 
     public static ShadowAbsListView shadowOf(AbsListView instance) {
@@ -1410,9 +1433,9 @@ public class Robolectric {
     public static ShadowSparseBooleanArray shadowOf(SparseBooleanArray other) {
         return (ShadowSparseBooleanArray) Robolectric.shadowOf_(other);
     }
-
-    public static ShadowSparseIntArray shadowOf(SparseIntArray other) {
-        return (ShadowSparseIntArray) Robolectric.shadowOf_(other);
+    
+    public static ShadowSparseIntArray shadowOf(SparseIntArray other){
+    	return (ShadowSparseIntArray) Robolectric.shadowOf_( other );
     }
 
     public static ShadowSQLiteCursor shadowOf(SQLiteCursor other) {
@@ -1886,8 +1909,8 @@ public class Robolectric {
         }
 
         public static Object setFinalStaticField(Field field, Object newValue) {
-            Object oldValue = null;
-
+        	Object oldValue;
+        	
             try {
                 field.setAccessible(true);
 

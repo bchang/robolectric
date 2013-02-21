@@ -49,7 +49,10 @@ public class ShadowResources {
     private AssetManager assetManager;
 
     public static void setSystemResources(ResourceLoader systemResourceLoader) {
-        system = ShadowResources.bind(new Resources(null, null, null), systemResourceLoader);
+        AssetManager assetManager = Robolectric.newInstanceOf(AssetManager.class);
+        DisplayMetrics metrics = new DisplayMetrics();
+        Configuration config = new Configuration();
+        system = ShadowResources.bind(new Resources(assetManager, metrics, config), systemResourceLoader);
     }
 
     static Resources bind(Resources resources, ResourceLoader resourceLoader) {
@@ -100,7 +103,7 @@ public class ShadowResources {
     private ResName getResName(int id) {
         ResName resName = resourceLoader.getResourceExtractor().getResName(id);
         if (resName == null) {
-          throw new Resources.NotFoundException("couldn't find a name for resource id " + id);
+            throw new Resources.NotFoundException("couldn't find a name for resource id " + id);
         }
         return resName;
     }
@@ -214,21 +217,25 @@ public class ShadowResources {
 
     @Implementation
     public int getInteger(int id) throws Resources.NotFoundException {
-    	return resourceLoader.getIntegerValue(getResName(id), getQualifiers());
+        return resourceLoader.getIntegerValue(getResName(id), getQualifiers());
     }
 
     @Implementation
     public int[] getIntArray(int id) throws Resources.NotFoundException {
         int[] arrayValue = resourceLoader.getIntegerArrayValue(getResName(id), getQualifiers());
         if (arrayValue == null) {
-            throw new Resources.NotFoundException();
+            throw new Resources.NotFoundException(notFound(id));
         }
         return arrayValue;
     }
 
     @Implementation
     public boolean getBoolean(int id) throws Resources.NotFoundException {
-    	return resourceLoader.getBooleanValue(getResName(id), getQualifiers());
+        try {
+            return resourceLoader.getBooleanValue(getResName(id), getQualifiers());
+        } catch (NullPointerException e) {
+            throw new Resources.NotFoundException(notFound(id));
+        }
     }
 
     @Implementation
@@ -264,6 +271,10 @@ public class ShadowResources {
 
     public ResourceLoader getResourceLoader() {
         return resourceLoader;
+    }
+
+    private String notFound(int id) {
+        return "couldn't find resource " + getResName(id).getFullyQualifiedName();
     }
 
     @Implements(Resources.Theme.class)
